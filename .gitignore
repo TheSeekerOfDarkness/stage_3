@@ -24,7 +24,7 @@ languages/rust/target/
 benchmarks/tmp/
 
 # Stage 2 Maven build output
-*-service/target/
+**/target/
 dependency-reduced-pom.xml
 logs/
 *.log
