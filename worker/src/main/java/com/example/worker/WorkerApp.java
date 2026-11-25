@@ -8,6 +8,7 @@ import com.example.worker.backend.ClusterBackend;
 import com.example.worker.backend.InMemoryBackend;
 import com.example.worker.backend.ReadinessStatus;
 import com.example.worker.backend.SearchResponseData;
+import com.example.worker.designa.DesignABackend;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -526,7 +527,7 @@ public class WorkerApp implements AutoCloseable {
     public static ClusterBackend createBackend(WorkerConfig config, StructuredLogger logger) {
         return switch (config.designMode) {
             case "in-memory" -> new InMemoryBackend(config, logger);
-            case "design-a" -> throw new UnsupportedOperationException("Design A backend is not yet configured");
+            case "design-a" -> DesignABackend.createDefault(config, logger);
             case "design-b" -> throw new UnsupportedOperationException("Design B backend is not yet configured");
             default -> throw new IllegalArgumentException("Unknown DESIGN_MODE: " + config.designMode);
         };
