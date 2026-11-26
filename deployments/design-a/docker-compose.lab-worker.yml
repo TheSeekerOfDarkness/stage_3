@@ -1,0 +1,37 @@
+# Physical lab machine worker deployment for Design A (configured via .env).
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile
+    container_name: ${WORKER_ID:-designa-worker}
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      WORKER_ID: ${WORKER_ID:?Set WORKER_ID in .env}
+      HOST_NAME: ${HOST_NAME:?Set HOST_NAME in .env}
+      HOST_IP: ${HOST_IP:?Set HOST_IP in .env}
+      PORT: ${PORT:-7000}
+      DESIGN_MODE: design-a
+      WORKER_ROLES: ${WORKER_ROLES:-ingest,index,search}
+      CRAWL_THREADS: ${CRAWL_THREADS:-2}
+      INDEX_THREADS: ${INDEX_THREADS:-2}
+      SEARCH_THREADS: ${SEARCH_THREADS:-8}
+      CONSUL_ENABLED: ${CONSUL_ENABLED:-true}
+      CONSUL_URL: ${CONSUL_URL:?Set CONSUL_URL in .env}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:?Set RABBITMQ_HOST in .env}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:?Set MINIO_ENDPOINT in .env}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      PUBLISH_INTERVAL_MS: ${PUBLISH_INTERVAL_MS:-1000}
+      MIN_REQUIRED_INDEX_VERSION: ${MIN_REQUIRED_INDEX_VERSION:-0}
+      GUTENBERG_URL_TEMPLATE: ${GUTENBERG_URL_TEMPLATE:-https://www.gutenberg.org/cache/epub/%d/pg%d.txt}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx1024m}
+      LOG_DIR: /app/logs
+      DATA_DIR: /app/data
+    volumes:
+      - ../../logs:/app/logs
+      - ../../data:/app/data

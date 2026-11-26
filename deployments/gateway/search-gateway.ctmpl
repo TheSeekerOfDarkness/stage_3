@@ -1,0 +1,34 @@
+{{- $services := service "search-service" -}}
+{{- if gt (len $services) 0 }}
+upstream search_backends {
+{{- range $services }}
+    server {{ .Address }}:{{ .Port }} max_fails=2 fail_timeout=5s;
+{{- end }}
+}
+{{- end }}
+
+server {
+    listen 80;
+
+    location = /api/v1/search {
+{{- if gt (len $services) 0 }}
+        proxy_pass http://search_backends/search$is_args$args;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Request-Id $req_id;
+        add_header X-Gateway-Upstream $upstream_addr always;
+        proxy_connect_timeout 2s;
+        proxy_read_timeout 15s;
+        proxy_next_upstream error timeout http_502 http_503;
+{{- else }}
+        default_type application/json;
+        return 503 '{"error":"no_ready_search_backends"}';
+{{- end }}
+    }
+
+    location / {
+        default_type application/json;
+        return 404 '{"error":"not_found"}';
+    }
+}

@@ -1,0 +1,46 @@
+# Physical lab machine worker deployment for Design B (configured via .env).
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile
+    container_name: ${WORKER_ID:-designb-worker}
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      WORKER_ID: ${WORKER_ID:?Set WORKER_ID in .env}
+      HOST_NAME: ${HOST_NAME:?Set HOST_NAME in .env}
+      HOST_IP: ${HOST_IP:?Set HOST_IP in .env}
+      PORT: ${PORT:-7000}
+      DESIGN_MODE: design-b
+      WORKER_ROLES: ${WORKER_ROLES:-ingest,index,search}
+      CRAWL_THREADS: ${CRAWL_THREADS:-2}
+      INDEX_THREADS: ${INDEX_THREADS:-2}
+      SEARCH_THREADS: ${SEARCH_THREADS:-8}
+      CONSUL_ENABLED: ${CONSUL_ENABLED:-true}
+      CONSUL_URL: ${CONSUL_URL:?Set CONSUL_URL in .env}
+      HAZELCAST_CLUSTER_NAME: ${HAZELCAST_CLUSTER_NAME:-search-cluster}
+      HAZELCAST_PORT: ${HAZELCAST_PORT:-5701}
+      HAZELCAST_JOIN_MODE: ${HAZELCAST_JOIN_MODE:-tcpip}
+      HAZELCAST_MEMBERS: ${HAZELCAST_MEMBERS:?Set HAZELCAST_MEMBERS in .env}
+      HAZELCAST_PUBLIC_ADDRESS: ${HAZELCAST_PUBLIC_ADDRESS:-}
+      HAZELCAST_BACKUP_COUNT: ${HAZELCAST_BACKUP_COUNT:-1}
+      MIN_REQUIRED_INDEX_VERSION: ${MIN_REQUIRED_INDEX_VERSION:-0}
+      GUTENBERG_URL_TEMPLATE: ${GUTENBERG_URL_TEMPLATE:-https://www.gutenberg.org/cache/epub/%d/pg%d.txt}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1536m --add-modules java.se --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.management/sun.management=ALL-UNNAMED --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED}
+      LOG_DIR: /app/logs
+      DATA_DIR: /app/data
+    volumes:
+      - ../../logs:/app/logs
+      - ../../data:/app/data
+
+  management-center:
+    image: hazelcast/management-center:5.5
+    container_name: designb_lab_mc
+    profiles: ["mc"]
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      MC_HTTP_PORT: ${MC_HTTP_PORT:-8081}
+      MC_DEFAULT_CLUSTER: ${HAZELCAST_CLUSTER_NAME:-search-cluster}
+      MC_DEFAULT_CLUSTER_MEMBERS: ${HAZELCAST_MEMBERS:-127.0.0.1:5701}

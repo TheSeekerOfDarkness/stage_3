@@ -1,0 +1,51 @@
+# Dedicated lab infrastructure node for Design A:
+# Runs Consul, NGINX Gateway, RabbitMQ, and MinIO on the coordinator/infra machine.
+services:
+  consul:
+    image: hashicorp/consul:1.19
+    container_name: designa_lab_consul
+    restart: unless-stopped
+    network_mode: host
+    command: >
+      agent -server -bootstrap-expect=1 -ui
+      -client=0.0.0.0
+      -bind=${INFRA_IP:-127.0.0.1}
+      -advertise=${INFRA_IP:-127.0.0.1}
+
+  nginx-gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    container_name: designa_lab_gateway
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CONSUL_HTTP_ADDR: ${INFRA_IP:-127.0.0.1}:8500
+      NGINX_PORT: ${NGINX_PORT:-8080}
+    depends_on:
+      - consul
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: designa_lab_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  minio:
+    image: minio/minio:RELEASE.2024-10-02T17-50-41Z
+    container_name: designa_lab_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  minio_data:

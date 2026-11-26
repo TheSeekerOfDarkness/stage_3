@@ -1,0 +1,25 @@
+# Dedicated gateway host deployment (Consul + Consul Template + NGINX)
+services:
+  consul:
+    image: hashicorp/consul:1.19
+    container_name: search_consul
+    restart: unless-stopped
+    network_mode: host
+    command: >
+      agent -server -bootstrap-expect=1 -ui
+      -client=0.0.0.0
+      -bind=${CONSUL_BIND_IP:-127.0.0.1}
+      -advertise=${CONSUL_BIND_IP:-127.0.0.1}
+
+  nginx-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: search_nginx_gateway
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CONSUL_HTTP_ADDR: ${CONSUL_HTTP_ADDR:-127.0.0.1:8500}
+      NGINX_PORT: ${NGINX_PORT:-8080}
+    depends_on:
+      - consul
