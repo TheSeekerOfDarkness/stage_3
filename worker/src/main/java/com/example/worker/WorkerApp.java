@@ -9,6 +9,7 @@ import com.example.worker.backend.InMemoryBackend;
 import com.example.worker.backend.ReadinessStatus;
 import com.example.worker.backend.SearchResponseData;
 import com.example.worker.designa.DesignABackend;
+import com.example.worker.designb.DesignBBackend;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -29,12 +30,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Unified interchangeable worker process supporting dynamic roles, Consul readiness,
+ * Unified interchangeable worker process supporting dynamic roles, Consul
+ * readiness,
  * and pluggable distributed search cluster backends.
  */
 public class WorkerApp implements AutoCloseable {
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
-    private static final Type MAP_TYPE = new TypeToken<Map<String, Object>>() {}.getType();
+    private static final Type MAP_TYPE = new TypeToken<Map<String, Object>>() {
+    }.getType();
 
     private final WorkerConfig config;
     private final ClusterBackend backend;
@@ -52,10 +55,10 @@ public class WorkerApp implements AutoCloseable {
     }
 
     public WorkerApp(WorkerConfig config,
-                     ClusterBackend backend,
-                     StructuredLogger logger,
-                     ConsulRegistrar consulRegistrar,
-                     boolean ownsLogger) {
+            ClusterBackend backend,
+            StructuredLogger logger,
+            ConsulRegistrar consulRegistrar,
+            boolean ownsLogger) {
         this.config = config;
         this.backend = backend;
         this.logger = logger;
@@ -182,9 +185,12 @@ public class WorkerApp implements AutoCloseable {
             ctx.header("X-Index-Version", String.valueOf(result.indexVersion));
 
             Map<String, Object> appliedFilters = new LinkedHashMap<>();
-            if (author != null) appliedFilters.put("author", author);
-            if (language != null) appliedFilters.put("language", language);
-            if (year != null) appliedFilters.put("year", year);
+            if (author != null)
+                appliedFilters.put("author", author);
+            if (language != null)
+                appliedFilters.put("language", language);
+            if (year != null)
+                appliedFilters.put("year", year);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("query", query);
@@ -219,11 +225,10 @@ public class WorkerApp implements AutoCloseable {
         boolean prev = lastReadyState.getAndSet(ready);
         if (prev != ready && logger != null) {
             logger.log("readiness_changed", Map.of(
-                "ready", ready,
-                "reason", reason,
-                "index_version", status.indexVersion,
-                "indexed_books", status.indexedBookCount
-            ));
+                    "ready", ready,
+                    "reason", reason,
+                    "index_version", status.indexVersion,
+                    "indexed_books", status.indexedBookCount));
         }
 
         if (!ready) {
@@ -310,18 +315,16 @@ public class WorkerApp implements AutoCloseable {
     private void handleDrain(Context ctx) {
         roleManager.beginDrain();
         ctx.result(GSON.toJson(Map.of(
-            "worker_id", config.workerId,
-            "draining", true
-        )));
+                "worker_id", config.workerId,
+                "draining", true)));
     }
 
     private void handleResume(Context ctx) {
         roleManager.resume();
         ctx.result(GSON.toJson(Map.of(
-            "worker_id", config.workerId,
-            "draining", false,
-            "roles", WorkerRole.toWireNames(roleManager.getActiveRoles())
-        )));
+                "worker_id", config.workerId,
+                "draining", false,
+                "roles", WorkerRole.toWireNames(roleManager.getActiveRoles()))));
     }
 
     private void handleEnqueueCrawl(Context ctx) {
@@ -348,11 +351,10 @@ public class WorkerApp implements AutoCloseable {
             String taskId = backend.enqueueCrawlTask(bookId, runId, sourceUrl);
             ctx.status(202);
             ctx.result(GSON.toJson(Map.of(
-                "task_id", taskId,
-                "book_id", bookId,
-                "run_id", runId,
-                "status", "queued"
-            )));
+                    "task_id", taskId,
+                    "book_id", bookId,
+                    "run_id", runId,
+                    "status", "queued")));
         } catch (Exception e) {
             sendError(ctx, 500, "Failed to enqueue crawl task: " + e.getMessage());
         }
@@ -379,10 +381,9 @@ public class WorkerApp implements AutoCloseable {
             List<Map<String, Object>> tasks = backend.enqueueCrawlBatch(bookIds, runId, sourceUrlTemplate);
             ctx.status(202);
             ctx.result(GSON.toJson(Map.of(
-                "count", tasks.size(),
-                "run_id", runId,
-                "tasks", tasks
-            )));
+                    "count", tasks.size(),
+                    "run_id", runId,
+                    "tasks", tasks)));
         } catch (Exception e) {
             sendError(ctx, 500, "Failed to enqueue crawl batch: " + e.getMessage());
         }
@@ -452,13 +453,12 @@ public class WorkerApp implements AutoCloseable {
         if (logger != null) {
             long latencyMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
             logger.log("search_served", Map.of(
-                "request_id", requestId,
-                "role", "search",
-                "query", query,
-                "total_matches", totalMatches,
-                "index_version", indexVersion,
-                "latency_ms", latencyMs
-            ));
+                    "request_id", requestId,
+                    "role", "search",
+                    "query", query,
+                    "total_matches", totalMatches,
+                    "index_version", indexVersion,
+                    "latency_ms", latencyMs));
         }
     }
 
@@ -528,7 +528,7 @@ public class WorkerApp implements AutoCloseable {
         return switch (config.designMode) {
             case "in-memory" -> new InMemoryBackend(config, logger);
             case "design-a" -> DesignABackend.createDefault(config, logger);
-            case "design-b" -> throw new UnsupportedOperationException("Design B backend is not yet configured");
+            case "design-b" -> new DesignBBackend(config, logger);
             default -> throw new IllegalArgumentException("Unknown DESIGN_MODE: " + config.designMode);
         };
     }
